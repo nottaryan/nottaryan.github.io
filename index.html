@@ -711,7 +711,7 @@
 <script>
 const CLIENT_ID = '208412';
 const CLIENT_SECRET = '8f8d4dadddbedd96c2851ac273d3de61af82e4a3';
-const REDIRECT_URI = 'https://nottaryan.github.io/';
+const REDIRECT_URI = 'https://nottaryan-github-io.vercel.app/';
 
 function show(id) {
   ['landing','loading','dashboard'].forEach(s => {
@@ -1112,14 +1112,10 @@ Provide a structured review in this exact JSON format:
 Respond ONLY with the JSON object, no markdown, no preamble.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ prompt })
     });
 
     const data = await response.json();
