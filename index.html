@@ -495,6 +495,113 @@
   .trend-up { color: var(--green); }
   .trend-down { color: var(--red); }
 
+  /* LEADERBOARD */
+  .lb-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+  }
+
+  .lb-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .lb-tab.active {
+    background: var(--orange);
+    color: #fff;
+  }
+
+  .lb-tab:hover:not(.active) {
+    color: var(--text);
+    background: #222;
+  }
+
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lb-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lb-table td {
+    padding: 14px 12px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #161616;
+    transition: background 0.15s;
+  }
+
+  .lb-table tr:hover td { background: #141414; }
+
+  .lb-table tr:last-child td { border-bottom: none; }
+
+  .lb-rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--muted);
+    width: 40px;
+  }
+
+  .lb-rank.gold { color: #FFD700; }
+  .lb-rank.silver { color: #C0C0C0; }
+  .lb-rank.bronze { color: #CD7F32; }
+
+  .lb-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    color: var(--text);
+  }
+
+  .lb-pace {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .lb-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .lb-dist {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+
+  .pr-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    background: var(--orange-dim);
+    color: var(--orange);
+    border: 1px solid var(--orange);
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    margin-left: 8px;
+  }
+
   /* AI REVIEW */
   .review-block {
     display: flex;
@@ -692,6 +799,17 @@
   <div class="panel" style="margin-bottom:2px">
     <h3><span class="dot"></span>Recent Runs</h3>
     <div class="run-list" id="runList"></div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="panel" style="margin-bottom:2px" id="leaderboardPanel">
+    <h3><span class="dot"></span>Personal PRs & Leaderboard</h3>
+    <div class="lb-tabs">
+      <button class="lb-tab active" onclick="switchTab('5k')">5K</button>
+      <button class="lb-tab" onclick="switchTab('10k')">10K</button>
+      <button class="lb-tab" onclick="switchTab('all')">All Runs</button>
+    </div>
+    <div id="lbContent"></div>
   </div>
 
   <!-- AI COACH -->
@@ -1050,6 +1168,9 @@ function renderDashboard(athlete, runs) {
   _athleteData = athlete;
   _runsData = runs;
 
+  // build leaderboard
+  buildLeaderboard(rRuns);
+
   // wire up generate button
   setTimeout(() => {
     const btn = document.getElementById('generateReviewBtn');
@@ -1057,6 +1178,86 @@ function renderDashboard(athlete, runs) {
   }, 100);
 
   show('dashboard');
+}
+
+// ---- Leaderboard ----
+let _lbRuns = [];
+let _activeTab = '5k';
+
+function switchTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.lb-tab').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().replace(' ','') === tab));
+  renderLeaderboard();
+}
+
+function buildLeaderboard(runs) {
+  _lbRuns = runs;
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('lbContent');
+  const runs = _lbRuns;
+
+  let filtered = [];
+  let showDist = false;
+
+  if (_activeTab === '5k') {
+    filtered = runs.filter(r => r.distance >= 4500 && r.distance <= 5500)
+      .sort((a, b) => a.moving_time - b.moving_time);
+  } else if (_activeTab === '10k') {
+    filtered = runs.filter(r => r.distance >= 9000 && r.distance <= 11000)
+      .sort((a, b) => a.moving_time - b.moving_time);
+  } else {
+    filtered = runs.filter(r => r.distance >= 1000)
+      .sort((a, b) => b.distance - a.distance);
+    showDist = true;
+  }
+
+  if (!filtered.length) {
+    el.innerHTML = `<p style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;padding:16px 0">No runs found for this distance. Log some ${_activeTab === '5k' ? '5K' : _activeTab === '10k' ? '10K' : ''} runs on Strava to see your rankings!</p>`;
+    return;
+  }
+
+  const top = filtered.slice(0, 10);
+  const fastestTime = filtered[0]?.moving_time;
+
+  el.innerHTML = `
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Run</th>
+          ${showDist ? '<th>Distance</th>' : ''}
+          <th>Time</th>
+          <th>Pace</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${top.map((r, i) => {
+          const pace = r.moving_time / (r.distance / 1000);
+          const date = new Date(r.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+          const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+          const isPR = !showDist && r.moving_time === fastestTime && i === 0;
+          return `
+            <tr>
+              <td><span class="lb-rank ${rankClass}">${i + 1}</span></td>
+              <td>
+                <span style="font-size:0.85rem">${r.name}</span>
+                ${isPR ? '<span class="pr-badge">PR</span>' : ''}
+              </td>
+              ${showDist ? `<td><span class="lb-dist">${(r.distance/1000).toFixed(2)} km</span></td>` : ''}
+              <td><span class="lb-time">${secsToHHMMSS(r.moving_time)}</span></td>
+              <td><span class="lb-pace">${secsToMMSS(pace)}/km</span></td>
+              <td><span class="lb-date">${date}</span></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    ${filtered.length > 10 ? `<p style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:12px;letter-spacing:1px">SHOWING TOP 10 OF ${filtered.length} RUNS</p>` : ''}
+  `;
 }
 
 // ---- AI Coach ----
@@ -1170,7 +1371,7 @@ Respond ONLY with the JSON object, no markdown, no preamble.`;
       </div>
     `;
   } catch (e) {
-    content.innerHTML = `<p style="color:var(--red);font-family:'DM Mono',monospace;font-size:0.75rem">Failed to generate review. Try again.</p>
+    content.innerHTML = `<p style="color:var(--red);font-family:'DM Mono',monospace;font-size:0.75rem">Error: ${e.message}</p>
     <button class="connect-btn" onclick="resetReview()" style="opacity:1;animation:none;font-size:0.65rem;padding:12px 24px;margin-top:12px">Retry</button>`;
   }
 }
