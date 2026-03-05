@@ -1,35 +1,1000 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Survey Form</title>
-        <link rel="stylesheet" href="styles.css">
-    </head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RunLab — Strava Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --orange: #ff4d00;
+    --orange-dim: rgba(255,77,0,0.15);
+    --text: #f0ede8;
+    --muted: #666;
+    --green: #00e5a0;
+    --red: #ff3b5c;
+  }
 
-    <body>
-        <h1 id="title">Survey Form</h1>
-        <p id="description">Thank you for taking the time to help me get a certification</p>
-        <form id="survey-form">
-            <label id="name-label">Please enter your name: <input placeholder="Jacob Jones..." id="name" type="text" required></label>
-            <label id="email-label">Please enter your Email: <input placeholder="123420@gmail.com..." type="email" id="email" required></label>
-            <label id="number-label">Please enter your age: <input placeholder="69" type="number" id="number" min="13" max="99"></label>
-            <label id="select-label">Which option discribes your current role? 
-                <select id="dropdown">
-                    <option>Professional</option>
-                    <option>student</option>
-                    <option>other</option>
-                </select>
-             </label>
-             <p>how likely are you to go to an outing</p>
-             <label><input type="radio" name="outing" value="outing"> very likely</label>
-             <label><input type="radio" name="outing" value="outing"> not likely</label>
-             <label><input type="radio" name="outing" value="outing"> Never</label>
-             
-             <label><input type="checkbox" value="yeet"> beep</label>
-             <label><input type="checkbox" value="yeet"> boop</label>
-             <label><input type="checkbox" value="yeet"> bleepp</label>
-             <label><input type="checkbox" value="yeet"> blop</label>
-        </form>
-    </body>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+  .logo span { color: var(--orange); }
+
+  .strava-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 2px;
+  }
+
+  /* LANDING */
+  #landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 89px);
+    padding: 40px;
+    text-align: center;
+    gap: 0;
+  }
+
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4rem, 12vw, 9rem);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s forwards;
+  }
+
+  .hero-title em {
+    color: var(--orange);
+    font-style: normal;
+    display: block;
+  }
+
+  .hero-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 420px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s forwards;
+  }
+
+  .connect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--orange);
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 18px 40px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+  }
+
+  .connect-btn:hover {
+    background: #ff6a2f;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(255,77,0,0.4);
+  }
+
+  .connect-btn svg { width: 20px; height: 20px; }
+
+  .stats-row {
+    display: flex;
+    gap: 40px;
+    margin-top: 72px;
+    opacity: 0;
+    animation: fadeUp 0.6s 1s forwards;
+  }
+
+  .stat-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stat-pill::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--orange);
+    border-radius: 50%;
+  }
+
+  /* LOADING */
+  #loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 89px);
+    gap: 24px;
+  }
+
+  .loader-track {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .loader-fill {
+    position: absolute;
+    left: -100%;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--orange);
+    animation: slide 1.2s ease-in-out infinite;
+  }
+
+  @keyframes slide {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  .loader-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* DASHBOARD */
+  #dashboard {
+    display: none;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeUp 0.5s forwards;
+  }
+
+  .athlete-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .athlete-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--orange);
+    object-fit: cover;
+  }
+
+  .athlete-avatar-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--orange);
+    background: var(--orange-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--orange);
+  }
+
+  .athlete-info h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .athlete-info p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 4px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 2px;
+    background: var(--orange);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .kpi-card:hover::after { transform: scaleX(1); }
+
+  .kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .kpi-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .kpi-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* TWO COL */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    margin-bottom: 2px;
+  }
+
+  .panel {
+    background: var(--surface);
+    padding: 32px;
+  }
+
+  .panel h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel h3 .dot {
+    width: 8px; height: 8px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* PACE ZONES */
+  .zone-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .zone-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+  }
+
+  .zone-name { color: var(--muted); width: 80px; }
+  .zone-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+  .zone-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .zone-pct { color: var(--text); width: 36px; text-align: right; }
+
+  /* RACE PREDICTIONS */
+  .race-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .race-card {
+    background: var(--surface2);
+    padding: 20px;
+    border: 1px solid var(--border);
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .race-card:hover { border-color: var(--orange); }
+
+  .race-dist {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .race-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .race-pace {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* RECENT RUNS */
+  .run-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .run-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--surface2);
+    border-left: 3px solid transparent;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: default;
+  }
+
+  .run-row:hover {
+    border-left-color: var(--orange);
+    background: #161616;
+  }
+
+  .run-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    width: 100px;
+  }
+
+  .run-name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 400;
+    padding: 0 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .run-stats {
+    display: flex;
+    gap: 24px;
+  }
+
+  .run-stat {
+    text-align: right;
+  }
+
+  .run-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+
+  .run-stat-lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* TREND CHART */
+  .chart-wrap { position: relative; height: 160px; }
+
+  canvas#trendChart { width: 100% !important; }
+
+  /* GAP analysis */
+  .gap-list { display: flex; flex-direction: column; gap: 16px; }
+
+  .gap-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .gap-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .gap-label { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 1px; }
+  .gap-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 1px; }
+
+  .trend-up { color: var(--green); }
+  .trend-down { color: var(--red); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    header { padding: 20px; }
+    #dashboard { padding: 20px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .race-grid { grid-template-columns: 1fr 1fr; }
+    .hero-title { font-size: clamp(3rem, 15vw, 6rem); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Run<span>Lab</span></div>
+  <div class="strava-badge">Powered by Strava</div>
+</header>
+
+<!-- LANDING -->
+<section id="landing">
+  <div class="hero-label">Training Intelligence</div>
+  <h1 class="hero-title">TRAIN<em>SMARTER</em></h1>
+  <p class="hero-sub">Deep training analysis and race time predictions — built on your real Strava data.</p>
+  <a class="connect-btn" id="connectBtn" href="#">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+    Connect Strava
+  </a>
+  <div class="stats-row">
+    <div class="stat-pill">Pace Analysis</div>
+    <div class="stat-pill">Race Predictions</div>
+    <div class="stat-pill">Training Zones</div>
+    <div class="stat-pill">GAP Data</div>
+  </div>
+</section>
+
+<!-- LOADING -->
+<section id="loading">
+  <div class="loader-text" id="loadingText">Authenticating</div>
+  <div class="loader-track"><div class="loader-fill"></div></div>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard">
+
+  <div class="athlete-bar">
+    <div class="athlete-avatar-placeholder" id="avatarPlaceholder">?</div>
+    <img class="athlete-avatar" id="avatarImg" style="display:none" src="" alt="avatar">
+    <div class="athlete-info">
+      <h2 id="athleteName">Athlete</h2>
+      <p id="athleteMeta">Loading…</p>
+    </div>
+  </div>
+
+  <div class="section-label">Overview — Last 90 Days</div>
+
+  <div class="kpi-grid" style="margin-bottom:2px">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Runs</div>
+      <div class="kpi-value" id="kpiRuns">—</div>
+      <div class="kpi-unit">activities</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Distance</div>
+      <div class="kpi-value" id="kpiDist">—</div>
+      <div class="kpi-unit">kilometres</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Pace</div>
+      <div class="kpi-value" id="kpiPace">—</div>
+      <div class="kpi-unit">min / km</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Elevation</div>
+      <div class="kpi-value" id="kpiElev">—</div>
+      <div class="kpi-unit">metres gained</div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:2px">
+    <!-- RACE PREDICTIONS -->
+    <div class="panel">
+      <h3><span class="dot"></span>Race Predictions</h3>
+      <div class="race-grid" id="racePreds"></div>
+    </div>
+
+    <!-- PACE ZONES -->
+    <div class="panel">
+      <h3><span class="dot"></span>Pace Zone Distribution</h3>
+      <div class="zone-list" id="zoneList"></div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:2px">
+    <!-- WEEKLY TREND -->
+    <div class="panel">
+      <h3><span class="dot"></span>Weekly Distance Trend</h3>
+      <div class="chart-wrap">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- GAP & BEST EFFORTS -->
+    <div class="panel">
+      <h3><span class="dot"></span>Performance Insights</h3>
+      <div class="gap-list" id="gapList"></div>
+    </div>
+  </div>
+
+  <!-- RECENT RUNS -->
+  <div class="panel" style="margin-bottom:2px">
+    <h3><span class="dot"></span>Recent Runs</h3>
+    <div class="run-list" id="runList"></div>
+  </div>
+
+</section>
+
+<script>
+const CLIENT_ID = '208412';
+const CLIENT_SECRET = '8f8d4dadddbedd96c2851ac273d3de61af82e4a3';
+const REDIRECT_URI = window.location.href.split('?')[0].split('#')[0];
+
+function show(id) {
+  ['landing','loading','dashboard'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? (id === 'dashboard' ? 'block' : 'flex') : 'none';
+  });
+}
+
+function setLoading(msg) { document.getElementById('loadingText').textContent = msg; }
+
+// OAuth
+document.getElementById('connectBtn').addEventListener('click', e => {
+  e.preventDefault();
+  const url = `https://www.strava.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=read,activity:read_all`;
+  window.location.href = url;
+});
+
+async function exchangeCode(code) {
+  const r = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, code, grant_type: 'authorization_code' })
+  });
+  return r.json();
+}
+
+async function fetchActivities(token, page = 1, per = 100) {
+  const after = Math.floor((Date.now() - 90*24*60*60*1000)/1000);
+  const r = await fetch(`https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=${per}&page=${page}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return r.json();
+}
+
+async function fetchAthlete(token) {
+  const r = await fetch('https://www.strava.com/api/v3/athlete', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return r.json();
+}
+
+// ---- Maths ----
+function secsToMMSS(s) {
+  const m = Math.floor(s/60), sec = Math.round(s%60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function secsToHHMMSS(s) {
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.round(s%60);
+  if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+// Grade Adjusted Pace correction factor (rough approx using Minetti)
+function gapFactor(gradePct) {
+  const g = gradePct / 100;
+  // energy cost ratio approximation
+  if (g < -0.45) return 2.5;
+  if (g > 0.45) return 4.0;
+  return 1 + 4.7*g + 19.6*g*g - 43.3*g*g*g + 46.3*g*g*g*g;
+}
+
+function computeGAP(distM, durS, elevM) {
+  if (!distM || !durS) return null;
+  const gradeFrac = distM > 0 ? elevM / distM : 0;
+  const cf = gapFactor(gradeFrac * 100);
+  const rawPace = durS / (distM / 1000); // s/km
+  return rawPace / cf;
+}
+
+// Riegel race predictor: T2 = T1 * (D2/D1)^1.06
+function riegelPredict(refDist, refTime, targetDist) {
+  return refTime * Math.pow(targetDist / refDist, 1.06);
+}
+
+function buildPredictions(runs) {
+  // Find best efforts per distance range for reference
+  const sorted5k = runs.filter(r => r.distance >= 4500 && r.distance <= 5500).sort((a,b) => (a.moving_time/a.distance)-(b.moving_time/b.distance));
+  const sorted10k = runs.filter(r => r.distance >= 9000 && r.distance <= 11000).sort((a,b) => (a.moving_time/a.distance)-(b.moving_time/b.distance));
+  const sortedHM = runs.filter(r => r.distance >= 19000 && r.distance <= 22000).sort((a,b) => (a.moving_time/a.distance)-(b.moving_time/b.distance));
+  const sortedFull = runs.filter(r => r.distance >= 38000).sort((a,b) => (a.moving_time/a.distance)-(b.moving_time/b.distance));
+
+  // fallback: use best recent pace across all runs
+  const allSorted = [...runs].filter(r => r.distance > 2000).sort((a,b) => (a.moving_time/a.distance)-(b.moving_time/b.distance));
+  if (!allSorted.length) return [];
+
+  const ref = sorted5k[0] || sorted10k[0] || sortedHM[0] || allSorted[0];
+  const refDist = ref.distance;
+  const refTime = ref.moving_time;
+
+  const targets = [
+    { label: '5K', dist: 5000 },
+    { label: '10K', dist: 10000 },
+    { label: 'Half Marathon', dist: 21097 },
+    { label: 'Marathon', dist: 42195 },
+  ];
+
+  return targets.map(t => {
+    let time;
+    if (t.dist === 5000 && sorted5k[0]) time = sorted5k[0].moving_time;
+    else if (t.dist === 10000 && sorted10k[0]) time = sorted10k[0].moving_time;
+    else if (t.dist === 21097 && sortedHM[0]) time = sortedHM[0].moving_time;
+    else if (t.dist === 42195 && sortedFull[0]) time = sortedFull[0].moving_time;
+    else time = riegelPredict(refDist, refTime, t.dist);
+    const pacePerKm = time / (t.dist / 1000);
+    return { label: t.label, time, pacePerKm };
+  });
+}
+
+function buildZones(runs) {
+  // zones by pace: <4:00, 4-4:30, 4:30-5:00, 5-5:30, 5:30-6:30, >6:30
+  const zones = [
+    { name: 'Elite', min: 0, max: 240, color: '#ff4d00', pct: 0 },
+    { name: 'Speed', min: 240, max: 270, color: '#ff8040', pct: 0 },
+    { name: 'Tempo', min: 270, max: 300, color: '#ffaa00', pct: 0 },
+    { name: 'Aerobic', min: 300, max: 330, color: '#00e5a0', pct: 0 },
+    { name: 'Easy', min: 330, max: 390, color: '#0099cc', pct: 0 },
+    { name: 'Recovery', min: 390, max: 9999, color: '#555', pct: 0 },
+  ];
+  let total = 0;
+  runs.forEach(r => {
+    if (!r.distance || !r.moving_time) return;
+    const pace = r.moving_time / (r.distance/1000);
+    const z = zones.find(z => pace >= z.min && pace < z.max);
+    if (z) { z.pct += r.moving_time; total += r.moving_time; }
+  });
+  zones.forEach(z => z.pct = total ? Math.round(z.pct / total * 100) : 0);
+  return zones;
+}
+
+function weeklyBuckets(runs) {
+  const now = Date.now();
+  const weeks = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = now - (i+1)*7*24*3600*1000;
+    const end = now - i*7*24*3600*1000;
+    const dist = runs.filter(r => {
+      const t = new Date(r.start_date).getTime();
+      return t >= start && t < end;
+    }).reduce((s, r) => s + r.distance/1000, 0);
+    const d = new Date(end);
+    weeks.push({ label: `${d.getMonth()+1}/${d.getDate()}`, dist: Math.round(dist * 10)/10 });
+  }
+  return weeks;
+}
+
+function drawChart(weeks) {
+  const canvas = document.getElementById('trendChart');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 160 * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '160px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 160;
+  const pad = { top: 10, right: 10, bottom: 30, left: 36 };
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top - pad.bottom;
+  const max = Math.max(...weeks.map(w => w.dist), 1);
+  const xStep = iW / (weeks.length - 1);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e1e1e';
+  ctx.lineWidth = 1;
+  [0, 0.25, 0.5, 0.75, 1].forEach(f => {
+    const y = pad.top + iH * (1 - f);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + iW, y); ctx.stroke();
+    ctx.fillStyle = '#444';
+    ctx.font = `${9 * dpr / dpr}px DM Mono, monospace`;
+    ctx.fillText(Math.round(max * f), 0, y + 4);
+  });
+
+  // Area
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + iH);
+  grad.addColorStop(0, 'rgba(255,77,0,0.3)');
+  grad.addColorStop(1, 'rgba(255,77,0,0)');
+
+  ctx.beginPath();
+  weeks.forEach((w, i) => {
+    const x = pad.left + i * xStep;
+    const y = pad.top + iH * (1 - w.dist / max);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.left + (weeks.length-1)*xStep, pad.top + iH);
+  ctx.lineTo(pad.left, pad.top + iH);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#ff4d00';
+  ctx.lineWidth = 2;
+  weeks.forEach((w, i) => {
+    const x = pad.left + i * xStep;
+    const y = pad.top + iH * (1 - w.dist / max);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots + labels
+  weeks.forEach((w, i) => {
+    if (i % 3 !== 0) return;
+    const x = pad.left + i * xStep;
+    const y = pad.top + iH * (1 - w.dist / max);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff4d00';
+    ctx.fill();
+    ctx.fillStyle = '#444';
+    ctx.font = `9px DM Mono, monospace`;
+    ctx.fillText(w.label, x - 12, H - 8);
+  });
+}
+
+function renderDashboard(athlete, runs) {
+  // Athlete
+  const name = `${athlete.firstname || ''} ${athlete.lastname || ''}`.trim() || 'Athlete';
+  document.getElementById('athleteName').textContent = name;
+  document.getElementById('avatarPlaceholder').textContent = name[0]?.toUpperCase() || '?';
+  document.getElementById('athleteMeta').textContent = `${athlete.city || ''}${athlete.city && athlete.country ? ', ' : ''}${athlete.country || ''} · Strava Runner`;
+  if (athlete.profile) {
+    const img = document.getElementById('avatarImg');
+    img.src = athlete.profile;
+    img.style.display = 'block';
+    document.getElementById('avatarPlaceholder').style.display = 'none';
+  }
+
+  // Filter runs only
+  const rRuns = runs.filter(r => r.type === 'Run' || r.sport_type === 'Run');
+
+  // KPIs
+  const totalDist = rRuns.reduce((s, r) => s + r.distance, 0) / 1000;
+  const totalTime = rRuns.reduce((s, r) => s + r.moving_time, 0);
+  const avgPaceSec = totalDist > 0 ? (totalTime / totalDist) : 0;
+  const totalElev = rRuns.reduce((s, r) => s + (r.total_elevation_gain || 0), 0);
+
+  document.getElementById('kpiRuns').textContent = rRuns.length;
+  document.getElementById('kpiDist').textContent = totalDist.toFixed(1);
+  document.getElementById('kpiPace').textContent = avgPaceSec > 0 ? secsToMMSS(avgPaceSec) : '—';
+  document.getElementById('kpiElev').textContent = Math.round(totalElev);
+
+  // Race predictions
+  const preds = buildPredictions(rRuns);
+  const predEl = document.getElementById('racePreds');
+  if (preds.length) {
+    predEl.innerHTML = preds.map(p => `
+      <div class="race-card">
+        <div class="race-dist">${p.label}</div>
+        <div class="race-time">${secsToHHMMSS(p.time)}</div>
+        <div class="race-pace">${secsToMMSS(p.pacePerKm)} /km</div>
+      </div>
+    `).join('');
+  } else {
+    predEl.innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Not enough run data yet.<br>Complete a few timed runs to unlock predictions.</p>';
+  }
+
+  // Zones
+  const zones = buildZones(rRuns);
+  document.getElementById('zoneList').innerHTML = zones.map(z => `
+    <div class="zone-row">
+      <span class="zone-name">${z.name}</span>
+      <div class="zone-bar-wrap"><div class="zone-bar" style="width:${z.pct}%;background:${z.color}"></div></div>
+      <span class="zone-pct">${z.pct}%</span>
+    </div>
+  `).join('');
+
+  // Weekly trend
+  const weeks = weeklyBuckets(rRuns);
+  setTimeout(() => drawChart(weeks), 100);
+
+  // Performance insights (GAP, longest run, best pace, etc.)
+  const gapRuns = rRuns.filter(r => r.distance > 2000 && r.moving_time > 0 && r.total_elevation_gain > 0);
+  const gapPaces = gapRuns.map(r => computeGAP(r.distance, r.moving_time, r.total_elevation_gain)).filter(Boolean);
+  const avgGAP = gapPaces.length ? gapPaces.reduce((a, b) => a + b, 0) / gapPaces.length : null;
+  const longestRun = rRuns.reduce((best, r) => r.distance > (best?.distance || 0) ? r : best, null);
+  const fastestPace = rRuns.filter(r => r.distance > 1000).reduce((best, r) => {
+    const p = r.moving_time / (r.distance / 1000);
+    return (!best || p < best.pace) ? { pace: p, name: r.name } : best;
+  }, null);
+  const recentWeekDist = weeks.slice(-1)[0]?.dist || 0;
+  const prevWeekDist = weeks.slice(-2)[0]?.dist || 0;
+  const weekChange = prevWeekDist > 0 ? ((recentWeekDist - prevWeekDist) / prevWeekDist * 100).toFixed(0) : null;
+
+  const insights = [];
+  if (avgGAP) insights.push({ label: 'Avg Grade Adjusted Pace', val: secsToMMSS(avgGAP) + ' /km', change: null });
+  if (longestRun) insights.push({ label: 'Longest Run', val: (longestRun.distance/1000).toFixed(1) + ' km', change: null });
+  if (fastestPace) insights.push({ label: 'Best Pace (any run)', val: secsToMMSS(fastestPace.pace) + ' /km', change: null });
+  if (weekChange !== null) insights.push({ label: 'Week-on-Week Volume', val: `${recentWeekDist} km`, change: weekChange });
+
+  document.getElementById('gapList').innerHTML = insights.map(i => `
+    <div class="gap-item">
+      <span class="gap-label">${i.label}</span>
+      <div style="text-align:right">
+        <div class="gap-val">${i.val}</div>
+        ${i.change !== null ? `<div class="run-stat-lbl ${+i.change >= 0 ? 'trend-up' : 'trend-down'}">${+i.change >= 0 ? '▲' : '▼'} ${Math.abs(i.change)}% vs last week</div>` : ''}
+      </div>
+    </div>
+  `).join('') || '<p style="color:var(--muted);font-size:0.8rem">Run more activities to see insights.</p>';
+
+  // Recent runs
+  const recent = [...rRuns].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 8);
+  document.getElementById('runList').innerHTML = recent.map(r => {
+    const d = new Date(r.start_date);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const pace = r.moving_time / (r.distance / 1000);
+    return `
+      <div class="run-row">
+        <span class="run-date">${dateStr}</span>
+        <span class="run-name">${r.name}</span>
+        <div class="run-stats">
+          <div class="run-stat">
+            <div class="run-stat-val">${(r.distance/1000).toFixed(2)}</div>
+            <div class="run-stat-lbl">km</div>
+          </div>
+          <div class="run-stat">
+            <div class="run-stat-val">${secsToMMSS(pace)}</div>
+            <div class="run-stat-lbl">/km</div>
+          </div>
+          <div class="run-stat">
+            <div class="run-stat-val">${secsToHHMMSS(r.moving_time)}</div>
+            <div class="run-stat-lbl">time</div>
+          </div>
+          <div class="run-stat">
+            <div class="run-stat-val">${Math.round(r.total_elevation_gain || 0)}</div>
+            <div class="run-stat-lbl">elev m</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p style="color:var(--muted);padding:16px;font-size:0.85rem">No runs found in the last 90 days.</p>';
+
+  show('dashboard');
+}
+
+// On load: check for OAuth code
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+
+  if (error) {
+    show('landing');
+    return;
+  }
+
+  if (code) {
+    show('loading');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    try {
+      setLoading('Authenticating with Strava');
+      const auth = await exchangeCode(code);
+      if (!auth.access_token) throw new Error('Auth failed');
+
+      setLoading('Fetching athlete profile');
+      const athlete = await fetchAthlete(auth.access_token);
+
+      setLoading('Loading your runs');
+      const activities = await fetchActivities(auth.access_token);
+
+      setLoading('Crunching the numbers');
+      await new Promise(r => setTimeout(r, 600));
+
+      renderDashboard(athlete, activities);
+    } catch (e) {
+      console.error(e);
+      alert('Something went wrong: ' + e.message);
+      show('landing');
+    }
+  } else {
+    show('landing');
+  }
+})();
+</script>
+</body>
 </html>
