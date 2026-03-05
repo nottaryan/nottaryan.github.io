@@ -495,6 +495,87 @@
   .trend-up { color: var(--green); }
   .trend-down { color: var(--red); }
 
+  /* AI REVIEW */
+  .review-block {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 4px;
+  }
+
+  .review-section {
+    border-left: 3px solid var(--orange);
+    padding-left: 20px;
+  }
+
+  .review-section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .review-section-body {
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1.8;
+    font-weight: 300;
+  }
+
+  .review-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 16px 24px;
+    margin-bottom: 20px;
+  }
+
+  .review-score-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--orange);
+    line-height: 1;
+  }
+
+  .review-score-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+  }
+
+  .ai-loading-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .ai-loading-dots span {
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    animation: dotPulse 1.2s ease-in-out infinite;
+  }
+
+  .ai-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -611,6 +692,18 @@
   <div class="panel" style="margin-bottom:2px">
     <h3><span class="dot"></span>Recent Runs</h3>
     <div class="run-list" id="runList"></div>
+  </div>
+
+  <!-- AI COACH -->
+  <div class="panel" style="margin-bottom:40px" id="aiCoachPanel">
+    <h3><span class="dot"></span>AI Training Review</h3>
+    <div id="aiCoachContent" style="display:flex;align-items:center;gap:16px">
+      <button class="connect-btn" id="generateReviewBtn" style="opacity:1;animation:none;font-size:0.7rem;padding:14px 28px">
+        Generate My Review
+      </button>
+      <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px">Powered by Claude AI</span>
+    </div>
+    <div id="aiReviewOutput" style="display:none"></div>
   </div>
 
 </section>
@@ -954,7 +1047,146 @@ function renderDashboard(athlete, runs) {
     `;
   }).join('') || '<p style="color:var(--muted);padding:16px;font-size:0.85rem">No runs found in the last 90 days.</p>';
 
+  _athleteData = athlete;
+  _runsData = activities;
+
+  // wire up generate button
+  setTimeout(() => {
+    const btn = document.getElementById('generateReviewBtn');
+    if (btn) btn.addEventListener('click', generateAIReview);
+  }, 100);
+
   show('dashboard');
+}
+
+// ---- AI Coach ----
+let _athleteData = null;
+let _runsData = null;
+
+async function generateAIReview() {
+  const btn = document.getElementById('generateReviewBtn');
+  const output = document.getElementById('aiReviewOutput');
+  const content = document.getElementById('aiCoachContent');
+
+  content.innerHTML = `
+    <div class="ai-loading">
+      <div class="ai-loading-dots"><span></span><span></span><span></span></div>
+      <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Analysing your training</span>
+    </div>`;
+
+  const runs = _runsData.filter(r => r.type === 'Run' || r.sport_type === 'Run');
+  const totalDist = (runs.reduce((s, r) => s + r.distance, 0) / 1000).toFixed(1);
+  const totalRuns = runs.length;
+  const avgPaceSec = runs.length ? runs.reduce((s,r) => s + r.moving_time/(r.distance/1000), 0) / runs.length : 0;
+  const avgPace = secsToMMSS(avgPaceSec);
+  const weeks = weeklyBuckets(runs);
+  const weeklyAvg = (weeks.reduce((s,w) => s+w.dist,0) / weeks.filter(w=>w.dist>0).length || 0).toFixed(1);
+  const preds = buildPredictions(runs);
+  const zones = buildZones(runs);
+  const longestRun = runs.reduce((best,r) => r.distance > (best?.distance||0) ? r : best, null);
+  const recentRuns = [...runs].sort((a,b) => new Date(b.start_date)-new Date(a.start_date)).slice(0,5);
+
+  const prompt = `You are an elite running coach providing a data-driven training analysis. Be analytical, specific, and concise. No fluff.
+
+Athlete data (last 90 days):
+- Total runs: ${totalRuns}
+- Total distance: ${totalDist} km
+- Average pace: ${avgPace} /km
+- Weekly average distance: ${weeklyAvg} km
+- Weekly distances (last 12 weeks): ${weeks.map(w => w.dist + 'km').join(', ')}
+- Longest run: ${longestRun ? (longestRun.distance/1000).toFixed(1) + 'km' : 'N/A'}
+- Pace zone distribution: ${zones.map(z => z.name + ': ' + z.pct + '%').join(', ')}
+- Race predictions: ${preds.map(p => p.label + ': ' + secsToHHMMSS(p.time)).join(', ')}
+- Recent run paces: ${recentRuns.map(r => secsToMMSS(r.moving_time/(r.distance/1000)) + '/km').join(', ')}
+
+Provide a structured review in this exact JSON format:
+{
+  "readinessScore": <number 1-100>,
+  "readinessVerdict": "<one sentence verdict on race readiness>",
+  "raceReadiness": "<2-3 sentences: assess race readiness based on volume, consistency, and predicted times. Be specific with numbers.>",
+  "paceAnalysis": "<2-3 sentences: analyse pace distribution and improvement opportunities. Reference actual pace data. Give specific actionable advice.>",
+  "keyInsight": "<1 bold insight or pattern you notice in the data that the athlete should know>",
+  "topRecommendations": ["<specific rec 1 with numbers>", "<specific rec 2 with numbers>", "<specific rec 3 with numbers>"]
+}
+
+Respond ONLY with the JSON object, no markdown, no preamble.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const review = JSON.parse(clean);
+
+    content.style.display = 'none';
+    output.style.display = 'block';
+    output.innerHTML = `
+      <div class="review-block">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div class="review-score">
+            <div class="review-score-num">${review.readinessScore}</div>
+            <div>
+              <div class="review-score-label">Readiness Score</div>
+              <div style="font-size:0.8rem;color:var(--text);margin-top:4px;max-width:220px">${review.readinessVerdict}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <div class="review-section-title">Race Readiness</div>
+          <div class="review-section-body">${review.raceReadiness}</div>
+        </div>
+
+        <div class="review-section">
+          <div class="review-section-title">Pace Analysis</div>
+          <div class="review-section-body">${review.paceAnalysis}</div>
+        </div>
+
+        <div class="review-section">
+          <div class="review-section-title">Key Insight</div>
+          <div class="review-section-body">${review.keyInsight}</div>
+        </div>
+
+        <div class="review-section">
+          <div class="review-section-title">Top Recommendations</div>
+          <div class="review-section-body">
+            ${review.topRecommendations.map((r,i) => `
+              <div style="display:flex;gap:12px;margin-bottom:10px">
+                <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--orange);line-height:1.4">${i+1}</span>
+                <span>${r}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <button class="connect-btn" onclick="resetReview()" style="opacity:1;animation:none;font-size:0.65rem;padding:12px 24px;margin-top:4px">
+          Regenerate Review
+        </button>
+      </div>
+    `;
+  } catch (e) {
+    content.innerHTML = `<p style="color:var(--red);font-family:'DM Mono',monospace;font-size:0.75rem">Failed to generate review. Try again.</p>
+    <button class="connect-btn" onclick="resetReview()" style="opacity:1;animation:none;font-size:0.65rem;padding:12px 24px;margin-top:12px">Retry</button>`;
+  }
+}
+
+function resetReview() {
+  document.getElementById('aiCoachContent').style.display = 'flex';
+  document.getElementById('aiCoachContent').innerHTML = `
+    <button class="connect-btn" id="generateReviewBtn" style="opacity:1;animation:none;font-size:0.7rem;padding:14px 28px" onclick="generateAIReview()">
+      Generate My Review
+    </button>
+    <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px">Powered by Claude AI</span>`;
+  document.getElementById('aiReviewOutput').style.display = 'none';
 }
 
 // On load: check for OAuth code
